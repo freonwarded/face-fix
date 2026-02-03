@@ -2,13 +2,9 @@
 // @name         FACE FIX
 // @namespace    https://github.com/freonwarded/face-fix
 // @version      4.1.0
-// @description  Улучшение интерфейса для работы с FACE
-// @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
-// @grant        none
 // @updateURL    https://raw.githubusercontent.com/freonwarded/face-fix/main/face-fix.user.js
 // @downloadURL  https://raw.githubusercontent.com/freonwarded/face-fix/main/face-fix.user.js
-// @run-at       document-end
 // ==/UserScript==
 
 (function() {
