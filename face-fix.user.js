@@ -1,8 +1,12 @@
 // ==UserScript==
 // @name         FACE FIX
-// @namespace    https://github.com/freonwarded/face-fix
+// @namespace    http://tampermonkey.net/
 // @version      4.1.0
+// @description  Улучшение интерфейса для работы с FACE
+// @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
+// @grant        none
+// @run-at       document-end
 // @updateURL    https://raw.githubusercontent.com/freonwarded/face-fix/main/face-fix.user.js
 // @downloadURL  https://raw.githubusercontent.com/freonwarded/face-fix/main/face-fix.user.js
 // ==/UserScript==
@@ -517,42 +521,42 @@
 
     function hideMSContainers() {
         const allMSImages = document.querySelectorAll('img.mui-88yf90-image');
-        
+
         allMSImages.forEach(img => {
             if (img.closest('.ms-main-images-container')) return;
-            
+
             if (msHiddenContainers.has(img)) return;
-            
+
             let parentContainer = img.parentElement;
             let foundSuitableContainer = false;
-            
+
             while (parentContainer && parentContainer !== document.body) {
                 const parentRect = parentContainer.getBoundingClientRect();
                 const imgRect = img.getBoundingClientRect();
-                
+
                 const hasButtons = parentContainer.querySelector('button') !== null;
                 const hasCardClass = parentContainer.classList.contains('MuiCard-root');
                 const hasMediaWrapper = parentContainer.querySelector('.mui-1odqcqr-mediaWrapper') !== null;
-                
+
                 if (hasButtons || hasCardClass || hasMediaWrapper) {
                     parentContainer = parentContainer.parentElement;
                     continue;
                 }
-                
-                if (parentRect.width >= imgRect.width * 0.9 && 
+
+                if (parentRect.width >= imgRect.width * 0.9 &&
                     parentRect.width <= imgRect.width * 1.5 &&
                     parentRect.height >= imgRect.height * 0.9 &&
                     parentRect.height <= imgRect.height * 1.5) {
-                    
+
                     parentContainer.style.display = 'none';
                     msHiddenContainers.add(img);
                     foundSuitableContainer = true;
                     break;
                 }
-                
+
                 parentContainer = parentContainer.parentElement;
             }
-            
+
             if (!foundSuitableContainer) {
                 const imgWrapper = img.closest('div[style*="width"], div[style*="height"], div[class*="image"], div[class*="Image"]');
                 if (imgWrapper && !imgWrapper.querySelector('button') && !imgWrapper.classList.contains('MuiCard-root')) {
@@ -760,7 +764,7 @@
         if (taskInfoProcessed) return;
 
         const contentContainers = document.querySelectorAll('.mui-qspag7-ItemCard-content');
-        
+
         contentContainers.forEach(contentContainer => {
             if (contentContainer.classList.contains('two-columns-processed')) {
                 return;
@@ -825,7 +829,7 @@
                     firstColumn.appendChild(row.cloneNode(true));
                 }
             });
-            
+
             secondColumnRows.forEach(row => {
                 if (row.parentNode) {
                     secondColumn.appendChild(row.cloneNode(true));
@@ -916,7 +920,7 @@
                 if (!parentContainer) return;
 
                 parentContainer.style.position = 'relative';
-                
+
                 const cardRect = cardContainer.getBoundingClientRect();
                 const scaleFactor = 4;
 
@@ -1108,7 +1112,7 @@
                 openButton.textContent = 'Открыть';
                 openButton.style.minWidth = '100px';
                 openButton.style.height = '36px';
-                
+
                 openButton.addEventListener('mouseover', () => {
                     openButton.style.backgroundColor = 'rgba(25, 118, 210, 0.12)';
                     openButton.style.boxShadow = '0 2px 4px rgba(25, 118, 210, 0.2)';
@@ -1419,7 +1423,7 @@
 
     function addActionButtonListeners() {
         const actionButtons = document.querySelectorAll('div.MuiBox-root[class*="item"]');
-        
+
         actionButtons.forEach(button => {
             const text = button.textContent.trim();
             if ((text === 'Отклонить' || text === 'Переназначить') && !button.classList.contains('face-fix-scroll-added')) {
