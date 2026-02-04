@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FACE FIX
 // @namespace    http://tampermonkey.net/
-// @version      4.1.2
+// @version      4.1.3
 // @description  Улучшение интерфейса для работы с FACE
 // @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
@@ -1555,7 +1555,7 @@
             if (!document.querySelector('.script-active-indicator')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'script-active-indicator';
-                indicator.title = 'FACE FIX v4.1.2 - Накодено с любовью к работе и ненавистью к руководству';
+                indicator.title = 'FACE FIX v4.1.3 - Накодено с любовью к работе и ненавистью к руководству';
                 indicator.style.cssText = `
                     color: #4CAF50;
                     font-size: 0.8em;
@@ -1568,7 +1568,7 @@
                     cursor: pointer;
                     text-decoration: none;
                 `;
-                indicator.textContent = 'FACE FIX v4.1.2';
+                indicator.textContent = 'FACE FIX v4.1.3';
                 indicator.onclick = () => {
                     window.open('https://boosty.to/grana/donate', '_blank');
                 };
