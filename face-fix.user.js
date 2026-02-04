@@ -10,7 +10,7 @@
 // @updateURL    https://raw.githubusercontent.com/freonwarded/face-fix/main/face-fix.user.js
 // @downloadURL  https://raw.githubusercontent.com/freonwarded/face-fix/main/face-fix.user.js
 // ==/UserScript==
-
+ 
 (function() {
     'use strict';
 
