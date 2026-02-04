@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FACE FIX
 // @namespace    http://tampermonkey.net/
-// @version      4.1.1
+// @version      4.1.2
 // @description  Улучшение интерфейса для работы с FACE
 // @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
@@ -347,6 +347,7 @@
         setInterval(updateCounterDisplay, 2000);
     })();
 
+    // === УЛУЧШЕННАЯ ОБРАБОТКА ДЛЯ MS ЗАДАНИЙ (из 4.1.1) ===
     function processMSImages() {
         if (currentPhotoTaskType !== 'MS') return;
 
@@ -567,6 +568,7 @@
         });
     }
 
+    // === ФУНКЦИЯ КОПИРОВАНИЯ В БУФЕР ОБМЕНА ===
     function copyToClipboard(text) {
         const textarea = document.createElement('textarea');
         textarea.value = text;
@@ -585,6 +587,7 @@
         }
     }
 
+    // === ПОКАЗ УВЕДОМЛЕНИЯ О КОПИРОВАНИИ ===
     function showCopyNotification(text) {
         const notification = document.createElement('div');
         notification.textContent = `Скопировано: ${text}`;
@@ -624,6 +627,7 @@
         }, 2000);
     }
 
+    // === ДЕЛАЕМ ЗНАЧЕНИЯ КЛИКАБЕЛЬНЫМИ (из 4.1.1 с улучшенной обработкой дат) ===
     function makeValuesClickable() {
         const valueElements = document.querySelectorAll('.mui-1s4u51b-value:not(.clipboard-enabled)');
 
@@ -760,6 +764,7 @@
         element.title = 'Кликните чтобы скопировать дату';
     }
 
+    // === ПРЕОБРАЗОВАНИЕ В ДВА СТОЛБЦА (из 4.1.1) ===
     function transformTaskInfoToTwoColumns() {
         if (taskInfoProcessed) return;
 
@@ -896,6 +901,7 @@
         document.head.appendChild(style);
     }
 
+    // === ПЕРЕМЕЩЕНИЕ ИЗОБРАЖЕНИЯ (из 4.0 - простая логика) ===
     function moveImage() {
         const currentUrl = window.location.href;
 
@@ -916,100 +922,27 @@
             const cardContainer = targetButton.closest('.MuiCard-root');
 
             if (cardContainer) {
-                const parentContainer = cardContainer.parentElement;
-                if (!parentContainer) return;
-
-                parentContainer.style.position = 'relative';
-
-                const cardRect = cardContainer.getBoundingClientRect();
-                const scaleFactor = 4;
-
-                const enlargedWidth = cardRect.width * scaleFactor;
-                const enlargedHeight = cardRect.height * scaleFactor;
-
-                parentContainer.style.cssText += `
-                    position: relative;
-                    min-height: ${enlargedHeight + 10}px;
-                    padding: 5px;
-                    background: #f8f9fa;
-                    border-radius: 4px;
-                    border: 1px solid #e0e0e0;
-                    box-sizing: border-box;
-                    overflow: visible;
-                `;
-
-                cardContainer.style.cssText = `
-                    transform: scale(${scaleFactor});
-                    transform-origin: top left;
-                    position: absolute;
-                    left: 5px;
-                    top: 5px;
-                    z-index: 1;
-                    width: ${cardRect.width}px;
-                    height: ${cardRect.height}px;
-                    margin: 0;
-                    padding: 0;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    background: white;
-                    border-radius: 3px;
-                    overflow: hidden;
-                `;
-
-                const buttonInside = cardContainer.querySelector('button.mui-1odqcqr-mediaWrapper');
-                if (buttonInside) {
-                    buttonInside.style.cssText = `
-                        width: 100%;
-                        height: 100%;
-                        margin: 0;
-                        padding: 0;
-                        transform: none;
-                    `;
-                }
-
-                const imageInside = cardContainer.querySelector('.mui-1dp3ohm-image');
-                if (imageInside) {
-                    imageInside.style.cssText = `
-                        width: 100%;
-                        height: 100%;
-                        object-fit: contain;
-                        display: block;
-                        margin: 0;
-                        padding: 0;
-                    `;
-                }
-
                 const imageContainer = document.createElement('div');
-                imageContainer.className = 'face-fix-enlarged-image';
                 imageContainer.style.cssText = `
-                    position: absolute;
-                    left: ${5 + enlargedWidth + 5}px;
-                    top: 5px;
-                    width: ${enlargedWidth}px;
-                    height: ${enlargedHeight}px;
-                    z-index: 1;
-                    margin: 0;
-                    padding: 0;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    background: white;
-                    border-radius: 3px;
-                    overflow: hidden;
+                    margin-left: 20px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    max-width: 300px;
+                    max-height: 400px;
                 `;
 
                 const clonedImg = exampleImg.cloneNode(true);
                 clonedImg.style.cssText = `
-                    width: 100%;
-                    height: 100%;
-                    object-fit: contain;
+                    max-width: 100%;
+                    max-height: 100%;
+                    width: auto;
+                    height: auto;
                     display: block;
-                    margin: 0;
-                    padding: 0;
                 `;
 
                 imageContainer.appendChild(clonedImg);
-                parentContainer.appendChild(imageContainer);
+                cardContainer.parentNode.insertBefore(imageContainer, cardContainer.nextSibling);
 
                 const originalContainer = exampleImg.closest('.mui-4ltfca-ItemCard-root');
                 if (originalContainer) {
@@ -1021,6 +954,7 @@
         }
     }
 
+    // === УМЕНЬШЕНИЕ УВЕДОМЛЕНИЙ ===
     function adjustToastifyNotification() {
         const toastContainer = document.querySelector('.Toastify__toast-container');
         if (toastContainer) {
@@ -1056,6 +990,7 @@
         }
     }
 
+    // === ДОБАВЛЕНИЕ КНОПОК НА СТРАНИЦАХ (из 4.1.1 с кнопкой "Транзакции") ===
     function addTasksHeader() {
         if (!window.location.href.includes('participant-report') && !window.location.href.includes('pos-report')) {
             return;
@@ -1286,6 +1221,7 @@
         });
     }
 
+    // === ПОДСКАЗКИ ДЛЯ КНОПОК ===
     function addConfirmButtonHint() {
         const button = document.querySelector('button.mui-nm6qd7-button-inlineButton') ||
                       document.querySelector('button[class*="button-inlineButton"]') ||
@@ -1414,6 +1350,7 @@
         });
     }
 
+    // === АВТОСКРОЛЛ (из 4.1.1) ===
     function scrollToBottom() {
         window.scrollTo({
             top: document.body.scrollHeight,
@@ -1435,6 +1372,7 @@
         });
     }
 
+    // === КЛАВИАТУРНАЯ НАВИГАЦИЯ ===
     function handleKeyPress(e) {
         if (e.code === 'Space' || e.key === ' ') {
             e.preventDefault();
@@ -1590,6 +1528,7 @@
         }
     }
 
+    // === ОПРЕДЕЛЕНИЕ ТИПА ЗАДАЧИ ===
     function getPhotoTaskTypeFromTemplate() {
         const names = document.querySelectorAll('.mui-1insy2n-name');
         let templateValue = '';
@@ -1609,13 +1548,14 @@
         return 'unknown';
     }
 
+    // === ОТОБРАЖЕНИЕ ИНДИКАТОРА АКТИВНОСТИ ===
     function showScriptActive() {
         const toolbar = document.querySelector('.mui-3qt5b8-TitleBar-baseToolbar');
         if (toolbar) {
             if (!document.querySelector('.script-active-indicator')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'script-active-indicator';
-                indicator.title = 'FACE FIX v4.1 - Накодено с любовью к работе и ненавистью к руководству';
+                indicator.title = 'FACE FIX v4.1.2 - Накодено с любовью к работе и ненавистью к руководству';
                 indicator.style.cssText = `
                     color: #4CAF50;
                     font-size: 0.8em;
@@ -1628,7 +1568,7 @@
                     cursor: pointer;
                     text-decoration: none;
                 `;
-                indicator.textContent = 'FACE FIX v4.1';
+                indicator.textContent = 'FACE FIX v4.1.2';
                 indicator.onclick = () => {
                     window.open('https://boosty.to/grana/donate', '_blank');
                 };
@@ -1643,6 +1583,7 @@
         }
     }
 
+    // === ОСНОВНАЯ ЛОГИКА ===
     function checkAndProcess() {
         if (window.location.href.includes('/process/')) {
             const newType = getPhotoTaskTypeFromTemplate();
@@ -1680,6 +1621,7 @@
         }
     }
 
+    // === ИНИЦИАЛИЗАЦИЯ ===
     function init() {
         checkAndProcess();
     }
