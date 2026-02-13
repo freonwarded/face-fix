@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FACE FIX
-//@namespace    http://tampermonkey.net/
-// @version      4.1.5
+// @namespace    http://tampermonkey.net/
+// @version      4.1.7
 // @description  Улучшение интерфейса для работы с FACE
 // @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
@@ -1147,7 +1147,7 @@
                                     targetMenuItem.dispatchEvent(menuItemMouseDown);
                                     targetMenuItem.dispatchEvent(menuItemClick);
                                 }
-                            }, 200);
+                            }, 200); // Таймаут 200 мс (вернули обратно)
                         }
                     });
 
@@ -1165,11 +1165,15 @@
                         let targetMenuItem;
 
                         if (isParticipantPage) {
+                            // Только Оценка задачи и Просмотр завершенной задачи, без Просмотра задачи
                             targetMenuItem = Array.from(menuItems).find(item =>
-                                item.textContent.trim() === 'Оценка задачи' ||
-                                item.textContent.trim() === 'Просмотр задачи' ||
-                                item.textContent.trim() === 'Просмотр завершенной задачи'
+                                item.textContent.trim() === 'Оценка задачи'
                             );
+                            if (!targetMenuItem) {
+                                targetMenuItem = Array.from(menuItems).find(item =>
+                                    item.textContent.trim() === 'Просмотр завершенной задачи'
+                                );
+                            }
                         } else if (isPosTasksPage) {
                             targetMenuItem = Array.from(menuItems).find(item =>
                                 item.textContent.trim() === 'Просмотр задачи'
@@ -1186,7 +1190,7 @@
                             targetMenuItem.dispatchEvent(menuItemMouseDown);
                             targetMenuItem.dispatchEvent(menuItemClick);
                         }
-                    }, 200);
+                    }, 200); // Таймаут 200 мс (вернули обратно)
                 }
             });
 
@@ -1546,7 +1550,7 @@
             if (!document.querySelector('.script-active-indicator')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'script-active-indicator';
-                indicator.title = 'FACE FIX v4.1.5 - Накодено с любовью к работе и ненавистью к руководству';
+                indicator.title = 'FACE FIX v4.1.7 - Накодено с любовью к работе и ненавистью к руководству';
                 indicator.style.cssText = `
                     color: #4CAF50;
                     font-size: 0.8em;
@@ -1559,7 +1563,7 @@
                     cursor: pointer;
                     text-decoration: none;
                 `;
-                indicator.textContent = 'FACE FIX v4.1.5';
+                indicator.textContent = 'FACE FIX v4.1.7';
                 indicator.onclick = () => {
                     window.open('https://boosty.to/grana/donate', '_blank');
                 };
