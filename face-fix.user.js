@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FACE FIX
-// @namespace    http://tampermonkey.net/
-// @version      4.1.3
+//@namespace    http://tampermonkey.net/
+// @version      4.1.5
 // @description  Улучшение интерфейса для работы с FACE
 // @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
@@ -10,9 +10,13 @@
 // @updateURL    https://raw.githubusercontent.com/freonwarded/face-fix/main/face-fix.user.js
 // @downloadURL  https://raw.githubusercontent.com/freonwarded/face-fix/main/face-fix.user.js
 // ==/UserScript==
- 
+
 (function() {
     'use strict';
+
+    // =========================================================================
+    //                               КОНСТАНТЫ
+    // =========================================================================
 
     const reasonMaps = {
         NPL: {
@@ -98,6 +102,10 @@
     let msImagesProcessed = false;
     let msHiddenContainers = new WeakSet();
 
+    // =========================================================================
+    //                      СЧЁТЧИК ФОТОЗАДАНИЙ (ПОЛНАЯ ВЕРСИЯ)
+    // =========================================================================
+
     (function initPhotoTaskCounter() {
         const LS_KEY = 'faceFixPhotoTaskCounters';
         const LAST_TYPE_KEY = 'faceFixLastCheckedType';
@@ -122,13 +130,11 @@
         function incrementCounter() {
             let lastType = localStorage.getItem(LAST_TYPE_KEY);
             if (lastType === 'В') lastType = 'V';
-
             if (lastType && window.photoTaskCounters && window.photoTaskCounters[lastType] !== undefined) {
                 window.photoTaskCounters[lastType]++;
                 window.photoTaskCounters['ИТОГ']++;
                 localStorage.removeItem(LAST_TYPE_KEY);
                 saveCounters();
-
                 if (window.updatePhotoTaskCounterDisplay) {
                     window.updatePhotoTaskCounterDisplay();
                 }
@@ -255,7 +261,6 @@
                                 if (buttonText.includes('Подтвердить') ||
                                     buttonText.includes('Оценить') ||
                                     buttonText.includes('Принять')) {
-
                                     button.removeEventListener('click', handleConfirmClick);
                                     button.addEventListener('click', handleConfirmClick);
                                 }
@@ -308,7 +313,6 @@
                             }, 500);
                         }
                     }
-
                     lastUrl = currentUrl;
                 }
             });
@@ -347,7 +351,10 @@
         setInterval(updateCounterDisplay, 2000);
     })();
 
-    // === УЛУЧШЕННАЯ ОБРАБОТКА ДЛЯ MS ЗАДАНИЙ (из 4.1.1) ===
+    // =========================================================================
+    //                    ОБРАБОТКА MS ИЗОБРАЖЕНИЙ (ПОЛНАЯ)
+    // =========================================================================
+
     function processMSImages() {
         if (currentPhotoTaskType !== 'MS') return;
 
@@ -525,7 +532,6 @@
 
         allMSImages.forEach(img => {
             if (img.closest('.ms-main-images-container')) return;
-
             if (msHiddenContainers.has(img)) return;
 
             let parentContainer = img.parentElement;
@@ -568,7 +574,10 @@
         });
     }
 
-    // === ФУНКЦИЯ КОПИРОВАНИЯ В БУФЕР ОБМЕНА ===
+    // =========================================================================
+    //                   КОПИРОВАНИЕ В БУФЕР ОБМЕНА + УВЕДОМЛЕНИЯ
+    // =========================================================================
+
     function copyToClipboard(text) {
         const textarea = document.createElement('textarea');
         textarea.value = text;
@@ -587,15 +596,14 @@
         }
     }
 
-    // === ПОКАЗ УВЕДОМЛЕНИЯ О КОПИРОВАНИИ ===
-    function showCopyNotification(text) {
+    function showNotification(text, isError = false) {
         const notification = document.createElement('div');
-        notification.textContent = `Скопировано: ${text}`;
+        notification.textContent = text;
         notification.style.cssText = `
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #4caf50;
+            background: ${isError ? '#d32f2f' : '#4caf50'};
             color: white;
             padding: 12px 20px;
             border-radius: 4px;
@@ -607,19 +615,21 @@
             word-break: break-all;
         `;
 
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeInOut {
-                0% { opacity: 0; transform: translateY(-10px); }
-                20% { opacity: 1; transform: translateY(0); }
-                80% { opacity: 1; transform: translateY(0); }
-                100% { opacity: 0; transform: translateY(-10px); }
-            }
-        `;
-        document.head.appendChild(style);
+        if (!document.querySelector('#face-fix-notification-style')) {
+            const style = document.createElement('style');
+            style.id = 'face-fix-notification-style';
+            style.textContent = `
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: translateY(-10px); }
+                    20% { opacity: 1; transform: translateY(0); }
+                    80% { opacity: 1; transform: translateY(0); }
+                    100% { opacity: 0; transform: translateY(-10px); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
 
         document.body.appendChild(notification);
-
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
@@ -627,7 +637,10 @@
         }, 2000);
     }
 
-    // === ДЕЛАЕМ ЗНАЧЕНИЯ КЛИКАБЕЛЬНЫМИ (из 4.1.1 с улучшенной обработкой дат) ===
+    // =========================================================================
+    //                 ДЕЛАЕМ ЗНАЧЕНИЯ КЛИКАБЕЛЬНЫМИ (ПОЛНАЯ ВЕРСИЯ)
+    // =========================================================================
+
     function makeValuesClickable() {
         const valueElements = document.querySelectorAll('.mui-1s4u51b-value:not(.clipboard-enabled)');
 
@@ -691,9 +704,7 @@
                     if (copyToClipboard(textToCopy)) {
                         this.style.backgroundColor = '#e8f5e8';
                         this.style.color = '#2e7d32';
-
-                        showCopyNotification(textToCopy);
-
+                        showNotification(`Скопировано: ${textToCopy}`);
                         setTimeout(() => {
                             this.style.backgroundColor = '';
                             this.style.color = '';
@@ -701,7 +712,6 @@
                     } else {
                         this.style.backgroundColor = '#ffebee';
                         this.style.color = '#c62828';
-
                         setTimeout(() => {
                             this.style.backgroundColor = '';
                             this.style.color = '';
@@ -733,9 +743,7 @@
             if (copyToClipboard(textToCopy)) {
                 this.style.backgroundColor = '#e8f5e8';
                 this.style.color = '#2e7d32';
-
-                showCopyNotification(textToCopy);
-
+                showNotification(`Скопировано: ${textToCopy}`);
                 setTimeout(() => {
                     this.style.backgroundColor = '';
                     this.style.color = '';
@@ -743,7 +751,6 @@
             } else {
                 this.style.backgroundColor = '#ffebee';
                 this.style.color = '#c62828';
-
                 setTimeout(() => {
                     this.style.backgroundColor = '';
                     this.style.color = '';
@@ -764,7 +771,10 @@
         element.title = 'Кликните чтобы скопировать дату';
     }
 
-    // === ПРЕОБРАЗОВАНИЕ В ДВА СТОЛБЦА (из 4.1.1) ===
+    // =========================================================================
+    //                 ПРЕОБРАЗОВАНИЕ В ДВЕ КОЛОНКИ (ПОЛНАЯ)
+    // =========================================================================
+
     function transformTaskInfoToTwoColumns() {
         if (taskInfoProcessed) return;
 
@@ -901,7 +911,10 @@
         document.head.appendChild(style);
     }
 
-    // === ПЕРЕМЕЩЕНИЕ ИЗОБРАЖЕНИЯ (из 4.0 - простая логика) ===
+    // =========================================================================
+    //                       ПЕРЕМЕЩЕНИЕ ИЗОБРАЖЕНИЯ (ПОЛНАЯ)
+    // =========================================================================
+
     function moveImage() {
         const currentUrl = window.location.href;
 
@@ -954,7 +967,10 @@
         }
     }
 
-    // === УМЕНЬШЕНИЕ УВЕДОМЛЕНИЙ ===
+    // =========================================================================
+    //                    УМЕНЬШЕНИЕ УВЕДОМЛЕНИЙ TOASTIFY (ПОЛНАЯ)
+    // =========================================================================
+
     function adjustToastifyNotification() {
         const toastContainer = document.querySelector('.Toastify__toast-container');
         if (toastContainer) {
@@ -990,7 +1006,10 @@
         }
     }
 
-    // === ДОБАВЛЕНИЕ КНОПОК НА СТРАНИЦАХ (из 4.1.1 с кнопкой "Транзакции") ===
+    // =========================================================================
+    //              ДОБАВЛЕНИЕ КНОПОК НА СТРАНИЦАХ (ПОЛНАЯ)
+    // =========================================================================
+
     function addTasksHeader() {
         if (!window.location.href.includes('participant-report') && !window.location.href.includes('pos-report')) {
             return;
@@ -1076,7 +1095,6 @@
                     openButton.style.borderColor = 'rgba(25, 118, 210, 0.3)';
                 });
 
-                // Добавляем кнопку "Транзакции" только для страниц отчетов (не для процесса)
                 if (!isParticipantPage && !isPosTasksPage) {
                     const transactionsButton = document.createElement('button');
                     transactionsButton.textContent = 'Транзакции';
@@ -1124,17 +1142,8 @@
                                 );
 
                                 if (targetMenuItem) {
-                                    const menuItemMouseDown = new MouseEvent('mousedown', {
-                                        bubbles: true,
-                                        cancelable: true,
-                                        view: window
-                                    });
-                                    const menuItemClick = new MouseEvent('click', {
-                                        bubbles: true,
-                                        cancelable: true,
-                                        view: window
-                                    });
-
+                                    const menuItemMouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
+                                    const menuItemClick = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
                                     targetMenuItem.dispatchEvent(menuItemMouseDown);
                                     targetMenuItem.dispatchEvent(menuItemClick);
                                 }
@@ -1157,20 +1166,10 @@
 
                         if (isParticipantPage) {
                             targetMenuItem = Array.from(menuItems).find(item =>
-                                item.textContent.trim() === 'Оценка задачи'
+                                item.textContent.trim() === 'Оценка задачи' ||
+                                item.textContent.trim() === 'Просмотр задачи' ||
+                                item.textContent.trim() === 'Просмотр завершенной задачи'
                             );
-
-                            if (!targetMenuItem) {
-                                targetMenuItem = Array.from(menuItems).find(item =>
-                                    item.textContent.trim() === 'Просмотр задачи'
-                                );
-                            }
-
-                            if (!targetMenuItem) {
-                                targetMenuItem = Array.from(menuItems).find(item =>
-                                    item.textContent.trim() === 'Просмотр завершенной задачи'
-                                );
-                            }
                         } else if (isPosTasksPage) {
                             targetMenuItem = Array.from(menuItems).find(item =>
                                 item.textContent.trim() === 'Просмотр задачи'
@@ -1182,17 +1181,8 @@
                         }
 
                         if (targetMenuItem) {
-                            const menuItemMouseDown = new MouseEvent('mousedown', {
-                                bubbles: true,
-                                cancelable: true,
-                                view: window
-                            });
-                            const menuItemClick = new MouseEvent('click', {
-                                bubbles: true,
-                                cancelable: true,
-                                view: window
-                            });
-
+                            const menuItemMouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
+                            const menuItemClick = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
                             targetMenuItem.dispatchEvent(menuItemMouseDown);
                             targetMenuItem.dispatchEvent(menuItemClick);
                         }
@@ -1204,13 +1194,8 @@
             tasksCell.appendChild(buttonsContainer);
             row.insertBefore(tasksCell, menuCell);
 
-            Object.assign(menuCell.style, {
-                verticalAlign: 'middle'
-            });
-
-            Object.assign(tasksCell.style, {
-                verticalAlign: 'middle'
-            });
+            Object.assign(menuCell.style, { verticalAlign: 'middle' });
+            Object.assign(tasksCell.style, { verticalAlign: 'middle' });
 
             row.style.height = 'auto';
             row.style.display = 'table-row';
@@ -1221,7 +1206,10 @@
         });
     }
 
-    // === ПОДСКАЗКИ ДЛЯ КНОПОК ===
+    // =========================================================================
+    //                      ПОДСКАЗКИ ДЛЯ КНОПОК (ПОЛНАЯ)
+    // =========================================================================
+
     function addConfirmButtonHint() {
         const button = document.querySelector('button.mui-nm6qd7-button-inlineButton') ||
                       document.querySelector('button[class*="button-inlineButton"]') ||
@@ -1289,17 +1277,10 @@
         if (!isParticipantReportPage && !isPosReportPage) return;
 
         const allButtons = document.querySelectorAll('button');
-        const searchButton = Array.from(allButtons)
-            .find(btn => {
-                const btnText = btn.textContent.trim();
-                return btnText === 'Найти';
-            });
+        const searchButton = Array.from(allButtons).find(btn => btn.textContent.trim() === 'Найти');
 
         if (!searchButton) return;
-
-        if (searchButton.nextElementSibling && searchButton.nextElementSibling.classList.contains('search-button-hints')) {
-            return;
-        }
+        if (searchButton.nextElementSibling && searchButton.nextElementSibling.classList.contains('search-button-hints')) return;
 
         const hintsSpan = document.createElement('span');
         hintsSpan.className = 'search-button-hints';
@@ -1350,7 +1331,10 @@
         });
     }
 
-    // === АВТОСКРОЛЛ (из 4.1.1) ===
+    // =========================================================================
+    //                         АВТОСКРОЛЛ (ПОЛНАЯ)
+    // =========================================================================
+
     function scrollToBottom() {
         window.scrollTo({
             top: document.body.scrollHeight,
@@ -1372,7 +1356,10 @@
         });
     }
 
-    // === КЛАВИАТУРНАЯ НАВИГАЦИЯ ===
+    // =========================================================================
+    //                      КЛАВИАТУРНАЯ НАВИГАЦИЯ (ПОЛНАЯ)
+    // =========================================================================
+
     function handleKeyPress(e) {
         if (e.code === 'Space' || e.key === ' ') {
             e.preventDefault();
@@ -1415,7 +1402,6 @@
                     const confirmBtn = document.querySelector('button.mui-nm6qd7-button-inlineButton') ||
                                     document.querySelector('button[class*="button-inlineButton"]') ||
                                     document.querySelector('button:not([disabled])');
-
                     if (confirmBtn) {
                         confirmBtn.click();
                         return;
@@ -1433,7 +1419,6 @@
             const confirmBtn = document.querySelector('button.mui-nm6qd7-button-inlineButton') ||
                             document.querySelector('button[class*="button-inlineButton"]') ||
                             document.querySelector('button:not([disabled])');
-
             if (confirmBtn) {
                 confirmBtn.click();
                 return;
@@ -1528,7 +1513,10 @@
         }
     }
 
-    // === ОПРЕДЕЛЕНИЕ ТИПА ЗАДАЧИ ===
+    // =========================================================================
+    //                  ОПРЕДЕЛЕНИЕ ТИПА ЗАДАЧИ (ПОЛНАЯ)
+    // =========================================================================
+
     function getPhotoTaskTypeFromTemplate() {
         const names = document.querySelectorAll('.mui-1insy2n-name');
         let templateValue = '';
@@ -1548,14 +1536,17 @@
         return 'unknown';
     }
 
-    // === ОТОБРАЖЕНИЕ ИНДИКАТОРА АКТИВНОСТИ ===
+    // =========================================================================
+    //                 ОТОБРАЖЕНИЕ ИНДИКАТОРА АКТИВНОСТИ (ПОЛНАЯ)
+    // =========================================================================
+
     function showScriptActive() {
         const toolbar = document.querySelector('.mui-3qt5b8-TitleBar-baseToolbar');
         if (toolbar) {
             if (!document.querySelector('.script-active-indicator')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'script-active-indicator';
-                indicator.title = 'FACE FIX v4.1.3 - Накодено с любовью к работе и ненавистью к руководству';
+                indicator.title = 'FACE FIX v4.1.5 - Накодено с любовью к работе и ненавистью к руководству';
                 indicator.style.cssText = `
                     color: #4CAF50;
                     font-size: 0.8em;
@@ -1568,7 +1559,7 @@
                     cursor: pointer;
                     text-decoration: none;
                 `;
-                indicator.textContent = 'FACE FIX v4.1.3';
+                indicator.textContent = 'FACE FIX v4.1.5';
                 indicator.onclick = () => {
                     window.open('https://boosty.to/grana/donate', '_blank');
                 };
@@ -1583,7 +1574,164 @@
         }
     }
 
-    // === ОСНОВНАЯ ЛОГИКА ===
+    // =========================================================================
+    //                          НОВЫЙ ФУНКЦИОНАЛ
+    //                    (КНОПКА "ОБРАЩЕНИЕ" ДЛЯ NPL)
+    // =========================================================================
+
+    let nplReasonMapping = null;
+    let nplMappingFetchPromise = null;
+
+    function fetchNplMapping() {
+        if (nplMappingFetchPromise) return nplMappingFetchPromise;
+
+        const url = 'https://raw.githubusercontent.com/freonwarded/face-fix/refs/heads/main/npl.txt';
+        nplMappingFetchPromise = fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error('Не удалось загрузить npl.txt');
+                return response.text();
+            })
+            .then(text => {
+                const mapping = {};
+                text.split('\n').forEach(line => {
+                    line = line.trim();
+                    if (line && line.includes(' - ')) {
+                        const [reason, textPart] = line.split(' - ').map(s => s.trim());
+                        mapping[reason] = textPart;
+                    }
+                });
+                nplReasonMapping = mapping;
+                return mapping;
+            })
+            .catch(err => {
+                console.error('FACE FIX: Ошибка загрузки npl.txt', err);
+                nplMappingFetchPromise = null;
+                return {};
+            });
+        return nplMappingFetchPromise;
+    }
+
+    function addAppealButton() {
+        const isTargetPage = window.location.href === 'https://dte-bo.pmruservice.com/dte-tasks-checking/process/EP79932LBC5ZRE3';
+        if (!isTargetPage) return;
+        if (getPhotoTaskTypeFromTemplate() !== 'NPL') return;
+
+        const reassignButton = Array.from(document.querySelectorAll('div.MuiBox-root'))
+            .find(el => el.textContent.trim() === 'Переназначить');
+        if (!reassignButton) return;
+
+        const container = reassignButton.parentElement;
+        if (!container) return;
+
+        const existing = container.querySelector('.face-fix-appeal-button');
+        const isSelected = reassignButton.classList.contains('mui-oukko0-item-selected');
+
+        if (!isSelected) {
+            if (existing) existing.remove();
+            return;
+        }
+        if (existing) return;
+
+        const appealButton = document.createElement('div');
+        appealButton.className = 'MuiBox-root face-fix-appeal-button';
+        appealButton.textContent = 'Обращение';
+        appealButton.style.cssText = `
+            color: #1976d2;
+            background-color: rgba(25, 118, 210, 0.08);
+            cursor: pointer;
+            font-weight: 500;
+            padding: 6px 24px;
+            white-space: nowrap;
+            border: 1px solid rgba(25, 118, 210, 0.3);
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
+            text-align: center;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+            font-size: 15px;
+            line-height: 24px;
+            height: 36px;
+            margin-left: 12px;
+        `;
+
+        appealButton.addEventListener('mouseenter', () => {
+            appealButton.style.backgroundColor = 'rgba(25, 118, 210, 0.12)';
+            appealButton.style.boxShadow = '0 2px 4px rgba(25, 118, 210, 0.2)';
+            appealButton.style.borderColor = 'rgba(25, 118, 210, 0.5)';
+        });
+        appealButton.addEventListener('mouseleave', () => {
+            appealButton.style.backgroundColor = 'rgba(25, 118, 210, 0.08)';
+            appealButton.style.boxShadow = 'none';
+            appealButton.style.borderColor = 'rgba(25, 118, 210, 0.3)';
+        });
+
+        appealButton.addEventListener('click', handleAppealClick);
+        reassignButton.insertAdjacentElement('afterend', appealButton);
+    }
+
+    async function handleAppealClick(e) {
+        e.stopPropagation();
+
+        const selectBox = document.querySelector('div[role="combobox"][aria-haspopup="listbox"]');
+        if (!selectBox) {
+            showNotification('Не найден выбор причины отклонения', true);
+            return;
+        }
+
+        const selectedRaw = selectBox.textContent.trim();
+        if (selectedRaw === 'Выбрать') {
+            showNotification('Выбери причину отклонения', true);
+            return;
+        }
+
+        const mapping = await fetchNplMapping();
+        const reasons = selectedRaw.split(',').map(s => s.trim()).filter(Boolean);
+        const reasonTexts = reasons.map(r => mapping[r]).filter(Boolean);
+        if (reasonTexts.length === 0) {
+            showNotification(`Не найден текст для причины: ${selectedRaw}`, true);
+            return;
+        }
+
+        const combinedReason = reasonTexts.join(', ');
+
+        let performerName = '';
+        const performerRow = Array.from(document.querySelectorAll('.mui-1insy2n-name'))
+            .find(el => el.textContent.trim().toLowerCase().includes('исполнитель'));
+        if (performerRow) {
+            const valueEl = performerRow.nextElementSibling;
+            if (valueEl && valueEl.classList.contains('mui-1s4u51b-value')) {
+                performerName = valueEl.textContent.trim().split(' ')[0];
+            }
+        }
+
+        let taskSuffix = '';
+        const taskNameRow = Array.from(document.querySelectorAll('.mui-1insy2n-name'))
+            .find(el => el.textContent.trim().toLowerCase().includes('название задания'));
+        if (taskNameRow) {
+            const valueEl = taskNameRow.nextElementSibling;
+            if (valueEl && valueEl.classList.contains('mui-1s4u51b-value')) {
+                const fullName = valueEl.textContent.trim();
+                const prefix = 'Дополнительное фотозадание';
+                taskSuffix = fullName.startsWith(prefix) ? fullName.substring(prefix.length).trim() : fullName;
+            }
+        }
+
+        const message = `${performerName}, выполненная вами фотозадача по Дополнительному фотозаданию: ${taskSuffix} на платформе К!Успеху была отклонена по причине ошибки: ${combinedReason}. Доступно повторное выполнение. Чтобы переделать задание, пройдите в папку «Доступные задания». В случае возникновения вопросов свяжитесь с Центром Поддержки по телефону 8 800 600 80 75 (круглосуточно, звонок бесплатный).`;
+
+        if (copyToClipboard(message)) {
+            showNotification('Текст скопирован в буфер обмена');
+        } else {
+            showNotification('Не удалось скопировать текст', true);
+        }
+    }
+
+    // =========================================================================
+    //                       ОСНОВНАЯ ЛОГИКА (ЦИКЛ)
+    // =========================================================================
+
     function checkAndProcess() {
         if (window.location.href.includes('/process/')) {
             const newType = getPhotoTaskTypeFromTemplate();
@@ -1619,22 +1767,23 @@
         if (window.updatePhotoTaskCounterDisplay) {
             window.updatePhotoTaskCounterDisplay();
         }
+
+        addAppealButton();
     }
 
-    // === ИНИЦИАЛИЗАЦИЯ ===
+    // =========================================================================
+    //                           ИНИЦИАЛИЗАЦИЯ
+    // =========================================================================
+
     function init() {
         checkAndProcess();
     }
 
     window.addEventListener('load', init);
-
     setInterval(checkAndProcess, 2000);
 
     const observer = new MutationObserver(checkAndProcess);
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
 
     let lastUrl = location.href;
     new MutationObserver(() => {
