@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FACE FIX
 // @namespace    http://tampermonkey.net/
-// @version      4.1.7
+// @version      4.1.8
 // @description  Улучшение интерфейса для работы с FACE
 // @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
@@ -94,6 +94,20 @@
             '9 - Недобросовестное фото',
             '0 - Фото с экрана'
         ]
+    };
+
+    // Конфигурация для кнопки "Обращение"
+    const appealConfig = {
+        NPL: {
+            mappingUrl: 'https://raw.githubusercontent.com/freonwarded/face-fix/refs/heads/main/npl.txt',
+            messageTemplate: (performer, reason, taskSuffix) => 
+                `${performer}, выполненная вами фотозадача по Дополнительному фотозаданию: ${taskSuffix} на платформе К!Успеху была отклонена по причине ошибки: ${reason}. Доступно повторное выполнение. Чтобы переделать задание, пройдите в папку «Доступные задания». В случае возникновения вопросов свяжитесь с Центром Поддержки по телефону 8 800 600 80 75 (круглосуточно, звонок бесплатный).`
+        },
+        В: {
+            mappingUrl: 'https://raw.githubusercontent.com/freonwarded/face-fix/refs/heads/main/v',
+            messageTemplate: (performer, reason) => 
+                `${performer}, выполненная вами фотозадача по Витрине на платформе К!Успеху была отклонена по причине ошибки: ${reason}. Доступно повторное выполнение. Чтобы переделать задание, пройдите в папку «Доступные задания». В случае возникновения вопросов свяжитесь с Центром Поддержки по телефону 8 800 600 80 75 (круглосуточно, звонок бесплатный).`
+        }
     };
 
     let currentPhotoTaskType = 'unknown';
@@ -1147,7 +1161,7 @@
                                     targetMenuItem.dispatchEvent(menuItemMouseDown);
                                     targetMenuItem.dispatchEvent(menuItemClick);
                                 }
-                            }, 200); // Таймаут 200 мс (вернули обратно)
+                            }, 200);
                         }
                     });
 
@@ -1165,7 +1179,6 @@
                         let targetMenuItem;
 
                         if (isParticipantPage) {
-                            // Только Оценка задачи и Просмотр завершенной задачи, без Просмотра задачи
                             targetMenuItem = Array.from(menuItems).find(item =>
                                 item.textContent.trim() === 'Оценка задачи'
                             );
@@ -1190,7 +1203,7 @@
                             targetMenuItem.dispatchEvent(menuItemMouseDown);
                             targetMenuItem.dispatchEvent(menuItemClick);
                         }
-                    }, 200); // Таймаут 200 мс (вернули обратно)
+                    }, 200);
                 }
             });
 
@@ -1550,7 +1563,7 @@
             if (!document.querySelector('.script-active-indicator')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'script-active-indicator';
-                indicator.title = 'FACE FIX v4.1.7 - Накодено с любовью к работе и ненавистью к руководству';
+                indicator.title = 'FACE FIX v4.1.8 - Накодено с любовью к работе и ненавистью к руководству';
                 indicator.style.cssText = `
                     color: #4CAF50;
                     font-size: 0.8em;
@@ -1563,7 +1576,7 @@
                     cursor: pointer;
                     text-decoration: none;
                 `;
-                indicator.textContent = 'FACE FIX v4.1.7';
+                indicator.textContent = 'FACE FIX v4.1.8';
                 indicator.onclick = () => {
                     window.open('https://boosty.to/grana/donate', '_blank');
                 };
@@ -1580,19 +1593,20 @@
 
     // =========================================================================
     //                          НОВЫЙ ФУНКЦИОНАЛ
-    //                    (КНОПКА "ОБРАЩЕНИЕ" ДЛЯ NPL)
+    //                    (КНОПКА "ОБРАЩЕНИЕ" ДЛЯ NPL и V)
     // =========================================================================
 
-    let nplReasonMapping = null;
-    let nplMappingFetchPromise = null;
+    const mappingCache = { NPL: null, В: null };
+    const mappingFetchPromise = {};
 
-    function fetchNplMapping() {
-        if (nplMappingFetchPromise) return nplMappingFetchPromise;
+    function fetchMapping(type) {
+        if (mappingCache[type]) return Promise.resolve(mappingCache[type]);
+        if (mappingFetchPromise[type]) return mappingFetchPromise[type];
 
-        const url = 'https://raw.githubusercontent.com/freonwarded/face-fix/refs/heads/main/npl.txt';
-        nplMappingFetchPromise = fetch(url)
+        const url = appealConfig[type].mappingUrl;
+        mappingFetchPromise[type] = fetch(url)
             .then(response => {
-                if (!response.ok) throw new Error('Не удалось загрузить npl.txt');
+                if (!response.ok) throw new Error(`Не удалось загрузить маппинг для ${type}`);
                 return response.text();
             })
             .then(text => {
@@ -1604,21 +1618,21 @@
                         mapping[reason] = textPart;
                     }
                 });
-                nplReasonMapping = mapping;
+                mappingCache[type] = mapping;
+                delete mappingFetchPromise[type];
                 return mapping;
             })
             .catch(err => {
-                console.error('FACE FIX: Ошибка загрузки npl.txt', err);
-                nplMappingFetchPromise = null;
+                console.error(`FACE FIX: Ошибка загрузки маппинга для ${type}`, err);
+                delete mappingFetchPromise[type];
                 return {};
             });
-        return nplMappingFetchPromise;
+        return mappingFetchPromise[type];
     }
 
     function addAppealButton() {
-        const isTargetPage = window.location.href === 'https://dte-bo.pmruservice.com/dte-tasks-checking/process/EP79932LBC5ZRE3';
-        if (!isTargetPage) return;
-        if (getPhotoTaskTypeFromTemplate() !== 'NPL') return;
+        const type = getPhotoTaskTypeFromTemplate();
+        if (type !== 'NPL' && type !== 'В') return;
 
         const reassignButton = Array.from(document.querySelectorAll('div.MuiBox-root'))
             .find(el => el.textContent.trim() === 'Переназначить');
@@ -1672,11 +1686,11 @@
             appealButton.style.borderColor = 'rgba(25, 118, 210, 0.3)';
         });
 
-        appealButton.addEventListener('click', handleAppealClick);
+        appealButton.addEventListener('click', (e) => handleAppealClick(e, type));
         reassignButton.insertAdjacentElement('afterend', appealButton);
     }
 
-    async function handleAppealClick(e) {
+    async function handleAppealClick(e, type) {
         e.stopPropagation();
 
         const selectBox = document.querySelector('div[role="combobox"][aria-haspopup="listbox"]');
@@ -1691,7 +1705,7 @@
             return;
         }
 
-        const mapping = await fetchNplMapping();
+        const mapping = await fetchMapping(type);
         const reasons = selectedRaw.split(',').map(s => s.trim()).filter(Boolean);
         const reasonTexts = reasons.map(r => mapping[r]).filter(Boolean);
         if (reasonTexts.length === 0) {
@@ -1711,19 +1725,23 @@
             }
         }
 
-        let taskSuffix = '';
-        const taskNameRow = Array.from(document.querySelectorAll('.mui-1insy2n-name'))
-            .find(el => el.textContent.trim().toLowerCase().includes('название задания'));
-        if (taskNameRow) {
-            const valueEl = taskNameRow.nextElementSibling;
-            if (valueEl && valueEl.classList.contains('mui-1s4u51b-value')) {
-                const fullName = valueEl.textContent.trim();
-                const prefix = 'Дополнительное фотозадание';
-                taskSuffix = fullName.startsWith(prefix) ? fullName.substring(prefix.length).trim() : fullName;
+        let message;
+        if (type === 'NPL') {
+            let taskSuffix = '';
+            const taskNameRow = Array.from(document.querySelectorAll('.mui-1insy2n-name'))
+                .find(el => el.textContent.trim().toLowerCase().includes('название задания'));
+            if (taskNameRow) {
+                const valueEl = taskNameRow.nextElementSibling;
+                if (valueEl && valueEl.classList.contains('mui-1s4u51b-value')) {
+                    const fullName = valueEl.textContent.trim();
+                    const prefix = 'Дополнительное фотозадание';
+                    taskSuffix = fullName.startsWith(prefix) ? fullName.substring(prefix.length).trim() : fullName;
+                }
             }
+            message = appealConfig.NPL.messageTemplate(performerName, combinedReason, taskSuffix);
+        } else if (type === 'В') {
+            message = appealConfig.В.messageTemplate(performerName, combinedReason);
         }
-
-        const message = `${performerName}, выполненная вами фотозадача по Дополнительному фотозаданию: ${taskSuffix} на платформе К!Успеху была отклонена по причине ошибки: ${combinedReason}. Доступно повторное выполнение. Чтобы переделать задание, пройдите в папку «Доступные задания». В случае возникновения вопросов свяжитесь с Центром Поддержки по телефону 8 800 600 80 75 (круглосуточно, звонок бесплатный).`;
 
         if (copyToClipboard(message)) {
             showNotification('Текст скопирован в буфер обмена');
