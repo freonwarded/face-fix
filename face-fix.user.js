@@ -14,6 +14,159 @@
 (function() {
     'use strict';
 
+    const SCRIPT_VERSION = '4.1.9';
+
+    // ------------------------ ПОКАЗ ИНФОРМАЦИИ ОБ ОБНОВЛЕНИЯХ ------------------------
+
+    function showChangelogIfNeeded() {
+        const lastShown = localStorage.getItem('faceFixLastShownChangelog');
+        if (lastShown === SCRIPT_VERSION) return;
+
+        const changelogUrl = 'https://raw.githubusercontent.com/freonwarded/face-fix/main/changelog.json';
+
+        fetch(changelogUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Не удалось загрузить список изменений');
+                return response.json();
+            })
+            .then(data => {
+                if (data.version !== SCRIPT_VERSION) {
+                    console.warn('FACE FIX: версия changelog не совпадает с версией скрипта');
+                    // можно всё равно показать, но с предупреждением или просто не показывать
+                    // для надёжности лучше показать, вдруг забыли обновить версию в JSON
+                }
+                showModal(data);
+                localStorage.setItem('faceFixLastShownChangelog', SCRIPT_VERSION);
+            })
+            .catch(err => {
+                console.error('FACE FIX: ошибка загрузки changelog', err);
+            });
+    }
+
+    function showModal({ title, changes, links }) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 20000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        `;
+
+        // Заголовок
+        const titleEl = document.createElement('h2');
+        titleEl.textContent = title || `Что нового в версии ${SCRIPT_VERSION}`;
+        titleEl.style.cssText = `
+            margin: 0 0 16px 0;
+            font-size: 20px;
+            color: #1976d2;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        `;
+        modal.appendChild(titleEl);
+
+        // Список изменений
+        if (changes && changes.length) {
+            const list = document.createElement('ul');
+            list.style.cssText = `
+                margin: 0 0 20px 0;
+                padding-left: 20px;
+                color: #333;
+                font-size: 15px;
+                line-height: 1.5;
+            `;
+            changes.forEach(change => {
+                const li = document.createElement('li');
+                li.textContent = change;
+                li.style.marginBottom = '6px';
+                list.appendChild(li);
+            });
+            modal.appendChild(list);
+        }
+
+        // Полезные ссылки
+        if (links && links.length) {
+            const linksTitle = document.createElement('h3');
+            linksTitle.textContent = 'Полезные ссылки';
+            linksTitle.style.cssText = `
+                margin: 20px 0 10px 0;
+                font-size: 16px;
+                color: #333;
+            `;
+            modal.appendChild(linksTitle);
+
+            const linksList = document.createElement('div');
+            linksList.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 20px;
+            `;
+            links.forEach(link => {
+                const a = document.createElement('a');
+                a.href = link.url;
+                a.textContent = link.text;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.style.cssText = `
+                    color: #1976d2;
+                    text-decoration: none;
+                    font-size: 14px;
+                    padding: 6px 10px;
+                    background: #f5f5f5;
+                    border-radius: 6px;
+                    transition: background 0.2s;
+                    display: inline-block;
+                `;
+                a.addEventListener('mouseenter', () => a.style.background = '#e0e0e0');
+                a.addEventListener('mouseleave', () => a.style.background = '#f5f5f5');
+                linksList.appendChild(a);
+            });
+            modal.appendChild(linksList);
+        }
+
+        // Кнопка закрытия
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Закрыть';
+        closeBtn.style.cssText = `
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            display: block;
+            margin-left: auto;
+            transition: background 0.2s;
+        `;
+        closeBtn.addEventListener('mouseenter', () => closeBtn.style.background = '#1565c0');
+        closeBtn.addEventListener('mouseleave', () => closeBtn.style.background = '#1976d2');
+        closeBtn.addEventListener('click', () => document.body.removeChild(overlay));
+        modal.appendChild(closeBtn);
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    }
+
     // ------------------------------- КОНСТАНТЫ -------------------------------
 
     const reasonMaps = {
@@ -94,7 +247,6 @@
         ]
     };
 
-    // Конфигурация для кнопки "Обращение"
     const appealConfig = {
         NPL: {
             mappingUrl: 'https://raw.githubusercontent.com/freonwarded/face-fix/refs/heads/main/npl.txt',
@@ -1766,6 +1918,7 @@
 
     function init() {
         checkAndProcess();
+        showChangelogIfNeeded(); // показываем окно с новостями после загрузки страницы
     }
 
     window.addEventListener('load', init);
