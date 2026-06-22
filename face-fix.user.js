@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FACE FIX
 // @namespace    http://tampermonkey.net/
-// @version      4.1.10
+// @version      4.1.11
 // @description  Улучшение интерфейса для работы с FACE
 // @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
@@ -14,7 +14,7 @@
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '4.1.10';
+    const SCRIPT_VERSION = '4.1.11';
 
     // ------------------------ ПОКАЗ ИНФОРМАЦИИ ОБ ОБНОВЛЕНИЯХ ------------------------
 
@@ -513,7 +513,6 @@
         if (currentPhotoTaskType !== 'MS') return;
 
         setTimeout(() => {
-            // Поддержка обоих классов изображений
             const allMSImages = document.querySelectorAll('img.mui-88yf90-image, img.mui-byurmj-image');
 
             if (allMSImages.length === 0) {
@@ -590,6 +589,13 @@
                 `;
 
                 const clonedImg = img.cloneNode(true);
+                // Если src пустой, а есть data-src – копируем
+                if (!clonedImg.src || clonedImg.src === '' || clonedImg.src === window.location.href) {
+                    const dataSrc = clonedImg.getAttribute('data-src');
+                    if (dataSrc) {
+                        clonedImg.src = dataSrc;
+                    }
+                }
                 clonedImg.style.cssText = `
                     max-width: 250px;
                     max-height: 200px;
@@ -635,6 +641,13 @@
                     `;
 
                     const fullSizeImg = img.cloneNode();
+                    // Также копируем data-src в src
+                    if (!fullSizeImg.src || fullSizeImg.src === '' || fullSizeImg.src === window.location.href) {
+                        const dataSrc = fullSizeImg.getAttribute('data-src');
+                        if (dataSrc) {
+                            fullSizeImg.src = dataSrc;
+                        }
+                    }
                     fullSizeImg.style.cssText = `
                         max-width: 95%;
                         max-height: 85%;
@@ -689,41 +702,59 @@
             if (img.closest('.ms-main-images-container')) return;
             if (msHiddenContainers.has(img)) return;
 
-            let parentContainer = img.parentElement;
-            let foundSuitableContainer = false;
-
-            while (parentContainer && parentContainer !== document.body) {
-                const parentRect = parentContainer.getBoundingClientRect();
-                const imgRect = img.getBoundingClientRect();
-
-                const hasButtons = parentContainer.querySelector('button') !== null;
-                const hasCardClass = parentContainer.classList.contains('MuiCard-root');
-                const hasMediaWrapper = parentContainer.querySelector('.mui-1odqcqr-mediaWrapper') !== null;
-
-                if (hasButtons || hasCardClass || hasMediaWrapper) {
-                    parentContainer = parentContainer.parentElement;
-                    continue;
+            // Пытаемся найти родительский блок .face-theoryBlock-contentItem или похожий
+            let containerToHide = img.closest('.face-theoryBlock-contentItem');
+            if (!containerToHide) {
+                // Ищем ближайший div.MuiBox-root, который содержит только изображение (или несколько)
+                let parent = img.parentElement;
+                while (parent && parent !== document.body) {
+                    if (parent.classList.contains('MuiBox-root') && 
+                        !parent.querySelector('button') && 
+                        !parent.classList.contains('MuiCard-root')) {
+                        // Проверим, что внутри нет других значимых элементов
+                        const children = parent.children;
+                        let allImages = true;
+                        for (let child of children) {
+                            if (child.tagName !== 'IMG' && child.tagName !== 'DIV') {
+                                allImages = false;
+                                break;
+                            }
+                        }
+                        if (allImages) {
+                            containerToHide = parent;
+                            break;
+                        }
+                    }
+                    parent = parent.parentElement;
                 }
-
-                if (parentRect.width >= imgRect.width * 0.9 &&
-                    parentRect.width <= imgRect.width * 1.5 &&
-                    parentRect.height >= imgRect.height * 0.9 &&
-                    parentRect.height <= imgRect.height * 1.5) {
-
-                    parentContainer.style.display = 'none';
-                    msHiddenContainers.add(img);
-                    foundSuitableContainer = true;
-                    break;
-                }
-
-                parentContainer = parentContainer.parentElement;
             }
 
-            if (!foundSuitableContainer) {
-                const imgWrapper = img.closest('div[style*="width"], div[style*="height"], div[class*="image"], div[class*="Image"]');
-                if (imgWrapper && !imgWrapper.querySelector('button') && !imgWrapper.classList.contains('MuiCard-root')) {
-                    imgWrapper.style.display = 'none';
-                    msHiddenContainers.add(img);
+            // Если не нашли, попробуем найти ближайший .MuiAccordionDetails-root или .mui-qspag7-ItemCard-content
+            if (!containerToHide) {
+                const accordion = img.closest('.MuiAccordionDetails-root');
+                if (accordion) {
+                    containerToHide = accordion;
+                } else {
+                    const cardContent = img.closest('.mui-qspag7-ItemCard-content');
+                    if (cardContent) {
+                        containerToHide = cardContent;
+                    }
+                }
+            }
+
+            if (containerToHide) {
+                containerToHide.style.display = 'none';
+                msHiddenContainers.add(img);
+            } else {
+                // запасной вариант: просто скрываем родительский div, если он небольшой
+                let parent = img.parentElement;
+                while (parent && parent !== document.body) {
+                    if (parent.children.length === 1 && parent.children[0] === img) {
+                        parent.style.display = 'none';
+                        msHiddenContainers.add(img);
+                        break;
+                    }
+                    parent = parent.parentElement;
                 }
             }
         });
@@ -1075,7 +1106,6 @@
             return;
         }
 
-        // Поддержка обоих классов изображений
         const exampleImg = document.querySelector('img.mui-88yf90-image, img.mui-byurmj-image');
         const targetButton = document.querySelector('button.mui-1odqcqr-mediaWrapper');
 
@@ -1094,6 +1124,13 @@
                 `;
 
                 const clonedImg = exampleImg.cloneNode(true);
+                // Если src пустой, а есть data-src – копируем
+                if (!clonedImg.src || clonedImg.src === '' || clonedImg.src === window.location.href) {
+                    const dataSrc = clonedImg.getAttribute('data-src');
+                    if (dataSrc) {
+                        clonedImg.src = dataSrc;
+                    }
+                }
                 clonedImg.style.cssText = `
                     max-width: 100%;
                     max-height: 100%;
@@ -1105,9 +1142,14 @@
                 imageContainer.appendChild(clonedImg);
                 cardContainer.parentNode.insertBefore(imageContainer, cardContainer.nextSibling);
 
+                // Скрываем оригинальный контейнер с изображением
                 const originalContainer = exampleImg.closest('.mui-4ltfca-ItemCard-root');
                 if (originalContainer) {
                     originalContainer.style.display = 'none';
+                } else {
+                    // Если не нашли, попробуем скрыть родительский блок с изображением
+                    const parent = exampleImg.closest('.face-theoryBlock-contentItem');
+                    if (parent) parent.style.display = 'none';
                 }
 
                 processedUrls.add(currentUrl);
