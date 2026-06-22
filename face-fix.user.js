@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FACE FIX
 // @namespace    http://tampermonkey.net/
-// @version      4.1.9
+// @version      4.1.10
 // @description  Улучшение интерфейса для работы с FACE
 // @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
@@ -14,7 +14,7 @@
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '4.1.9';
+    const SCRIPT_VERSION = '4.1.10';
 
     // ------------------------ ПОКАЗ ИНФОРМАЦИИ ОБ ОБНОВЛЕНИЯХ ------------------------
 
@@ -32,8 +32,6 @@
             .then(data => {
                 if (data.version !== SCRIPT_VERSION) {
                     console.warn('FACE FIX: версия changelog не совпадает с версией скрипта');
-                    // можно всё равно показать, но с предупреждением или просто не показывать
-                    // для надёжности лучше показать, вдруг забыли обновить версию в JSON
                 }
                 showModal(data);
                 localStorage.setItem('faceFixLastShownChangelog', SCRIPT_VERSION);
@@ -71,7 +69,6 @@
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         `;
 
-        // Заголовок
         const titleEl = document.createElement('h2');
         titleEl.textContent = title || `Что нового в версии ${SCRIPT_VERSION}`;
         titleEl.style.cssText = `
@@ -83,7 +80,6 @@
         `;
         modal.appendChild(titleEl);
 
-        // Список изменений
         if (changes && changes.length) {
             const list = document.createElement('ul');
             list.style.cssText = `
@@ -102,7 +98,6 @@
             modal.appendChild(list);
         }
 
-        // Полезные ссылки
         if (links && links.length) {
             const linksTitle = document.createElement('h3');
             linksTitle.textContent = 'Полезные ссылки';
@@ -143,7 +138,6 @@
             modal.appendChild(linksList);
         }
 
-        // Кнопка закрытия
         const closeBtn = document.createElement('button');
         closeBtn.textContent = 'Закрыть';
         closeBtn.style.cssText = `
@@ -519,7 +513,8 @@
         if (currentPhotoTaskType !== 'MS') return;
 
         setTimeout(() => {
-            const allMSImages = document.querySelectorAll('img.mui-88yf90-image');
+            // Поддержка обоих классов изображений
+            const allMSImages = document.querySelectorAll('img.mui-88yf90-image, img.mui-byurmj-image');
 
             if (allMSImages.length === 0) {
                 return;
@@ -688,7 +683,7 @@
     }
 
     function hideMSContainers() {
-        const allMSImages = document.querySelectorAll('img.mui-88yf90-image');
+        const allMSImages = document.querySelectorAll('img.mui-88yf90-image, img.mui-byurmj-image');
 
         allMSImages.forEach(img => {
             if (img.closest('.ms-main-images-container')) return;
@@ -1080,7 +1075,8 @@
             return;
         }
 
-        const exampleImg = document.querySelector('.mui-88yf90-image');
+        // Поддержка обоих классов изображений
+        const exampleImg = document.querySelector('img.mui-88yf90-image, img.mui-byurmj-image');
         const targetButton = document.querySelector('button.mui-1odqcqr-mediaWrapper');
 
         if (exampleImg && targetButton) {
@@ -1673,7 +1669,6 @@
         });
         if (!templateValue) return 'unknown';
 
-        // Приоритет: NPL (содержит "npl") > A (начинается с a или содержит a_/a-) > V (начинается с v или содержит v_/v-) > MS (содержит "ms")
         if (templateValue.includes('npl')) return 'NPL';
         if (templateValue.startsWith('a') || /\ba[_\-]/.test(templateValue)) return 'A';
         if (templateValue.startsWith('v') || /\bv[_\-]/.test(templateValue)) return 'В';
@@ -1689,7 +1684,7 @@
             if (!document.querySelector('.script-active-indicator')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'script-active-indicator';
-                indicator.title = 'FACE FIX v4.1.9 - Накодено с любовью к работе и ненавистью к руководству';
+                indicator.title = `FACE FIX v${SCRIPT_VERSION} - Накодено с любовью к работе и ненавистью к руководству`;
                 indicator.style.cssText = `
                     color: #4CAF50;
                     font-size: 0.8em;
@@ -1702,7 +1697,7 @@
                     cursor: pointer;
                     text-decoration: none;
                 `;
-                indicator.textContent = 'FACE FIX v4.1.9';
+                indicator.textContent = `FACE FIX v${SCRIPT_VERSION}`;
                 indicator.onclick = () => {
                     window.open('https://boosty.to/grana/donate', '_blank');
                 };
@@ -1918,7 +1913,7 @@
 
     function init() {
         checkAndProcess();
-        showChangelogIfNeeded(); // показываем окно с новостями после загрузки страницы
+        showChangelogIfNeeded();
     }
 
     window.addEventListener('load', init);
