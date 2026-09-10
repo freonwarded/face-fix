@@ -4,7 +4,7 @@ Userscript для улучшения интерфейса и ускорения 
 
 Скрипт устанавливается через [Tampermonkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) и автоматически обновляется из этого репозитория.
 
-**Текущая версия: 4.1.11**
+**Текущая версия: 4.1.12**
 
 ---
 
