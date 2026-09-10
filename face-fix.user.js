@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FACE FIX
 // @namespace    http://tampermonkey.net/
-// @version      4.1.11
+// @version      4.1.12
 // @description  Улучшение интерфейса для работы с FACE
 // @author       TOSHA tg: tosha_blyat
 // @match        https://dte-bo.pmruservice.com/*
@@ -14,7 +14,7 @@
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '4.1.11';
+    const SCRIPT_VERSION = '4.1.12';
 
     // ------------------------ ПОКАЗ ИНФОРМАЦИИ ОБ ОБНОВЛЕНИЯХ ------------------------
 
