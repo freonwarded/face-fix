@@ -167,7 +167,6 @@ https://raw.githubusercontent.com/freonwarded/face-fix/main/face-fix.user.js
 
 Если нашли баг, столкнулись с некорректным отображением или у вас есть предложение по улучшению FACE FIX - сообщите об этом.
 
-**Автор:** Тоша
 **Telegram:** [@tosha_blyat](https://t.me/tosha_blyat)
 
 При сообщении об ошибке желательно указать:
