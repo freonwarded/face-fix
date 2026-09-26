@@ -14,7 +14,26 @@
 (function() {
     'use strict';
 
-    const SCRIPT_VERSION = '4.1.12';
+    // ------------------------ ВЕРСИЯ СКРИПТА ИЗ @version ------------------------
+
+    const SCRIPT_VERSION = (() => {
+        try {
+            if (typeof GM_info !== 'undefined' && GM_info?.script?.version) {
+                return GM_info.script.version;
+            }
+        } catch (e) {}
+        // Fallback: парсим @version из собственного исходника
+        try {
+            for (const s of document.querySelectorAll('script')) {
+                const src = s.textContent || '';
+                if (src.includes('// @name') && src.includes('FACE FIX')) {
+                    const m = src.match(/\/\/\s*@version\s+([\d.]+)/);
+                    if (m) return m[1];
+                }
+            }
+        } catch (e) {}
+        return 'unknown'; // крайний fallback
+    })();
 
     // ------------------------ ПОКАЗ ИНФОРМАЦИИ ОБ ОБНОВЛЕНИЯХ ------------------------
 
@@ -243,13 +262,13 @@
 
     const appealConfig = {
         NPL: {
-            mappingUrl: 'https://raw.githubusercontent.com/freonwarded/face-fix/refs/heads/main/npl.txt',
-            messageTemplate: (performer, reason, taskSuffix) => 
+            mappingUrl: 'https://raw.githack.com/freonwarded/face-fix/refs/heads/main/npl.txt',
+            messageTemplate: (performer, reason, taskSuffix) =>
                 `${performer}, выполненная вами фотозадача по Дополнительному фотозаданию: ${taskSuffix} на платформе К!Успеху была отклонена по причине ошибки: ${reason}. Доступно повторное выполнение. Чтобы переделать задание, пройдите в папку «Доступные задания». В случае возникновения вопросов свяжитесь с Центром Поддержки по телефону 8 800 600 80 75 (круглосуточно, звонок бесплатный).`
         },
         В: {
-            mappingUrl: 'https://raw.githubusercontent.com/freonwarded/face-fix/refs/heads/main/v',
-            messageTemplate: (performer, reason) => 
+            mappingUrl: 'https://raw.githack.com/freonwarded/face-fix/refs/heads/main/v',
+            messageTemplate: (performer, reason) =>
                 `${performer}, выполненная вами фотозадача по Витрине на платформе К!Успеху была отклонена по причине ошибки: ${reason}. Доступно повторное выполнение. Чтобы переделать задание, пройдите в папку «Доступные задания». В случае возникновения вопросов свяжитесь с Центром Поддержки по телефону 8 800 600 80 75 (круглосуточно, звонок бесплатный).`
         }
     };
@@ -507,6 +526,174 @@
         setInterval(updateCounterDisplay, 2000);
     })();
 
+    // ------------------------- ПАСХАЛКА (TOGGLE) -------------------------
+
+    const EASTER_EGG_LS_KEY = 'faceFixEasterEggEnabled';
+    const EASTER_EGG_H1_CHOICE_KEY = 'faceFixEasterEggH1Choice';
+
+    const EASTER_EGG_H1_VARIANTS = [
+        'Проверка творчества душевнобольных',
+        'Список фотокарточек',
+        'Пидорасы прислали картинки'
+    ];
+
+    function isEasterEggEnabled() {
+        return localStorage.getItem(EASTER_EGG_LS_KEY) === 'true';
+    }
+
+    function getStableRandomH1() {
+        let stored = sessionStorage.getItem(EASTER_EGG_H1_CHOICE_KEY);
+        if (stored && EASTER_EGG_H1_VARIANTS.includes(stored)) return stored;
+        const picked = EASTER_EGG_H1_VARIANTS[Math.floor(Math.random() * EASTER_EGG_H1_VARIANTS.length)];
+        sessionStorage.setItem(EASTER_EGG_H1_CHOICE_KEY, picked);
+        return picked;
+    }
+
+    let isApplyingEasterEgg = false;
+
+    function setTextIfChanged(el, text) {
+        if (el && el.textContent !== text) {
+            el.textContent = text;
+        }
+    }
+
+    function setPlaceholderIfChanged(input, text) {
+        if (input && input.placeholder !== text) {
+            input.placeholder = text;
+        }
+    }
+
+    function applyEasterEggTexts(enabled) {
+        if (isApplyingEasterEgg) return;
+        if (typeof enabled !== 'boolean') enabled = isEasterEggEnabled();
+
+        isApplyingEasterEgg = true;
+        try {
+            const path = window.location.pathname;
+
+            if (path === '/dte-tasks-checking') {
+                const h1 = Array.from(document.querySelectorAll('h1'))
+                    .find(el => {
+                        const t = el.textContent.trim();
+                        return t === 'Проверка заданий' || EASTER_EGG_H1_VARIANTS.includes(t);
+                    });
+                if (h1) {
+                    if (enabled) {
+                        setTextIfChanged(h1, getStableRandomH1());
+                    } else {
+                        setTextIfChanged(h1, 'Проверка заданий');
+                    }
+                }
+
+                const phMap = {
+                    'Код торг.точки': 'Номер аула',
+                    'Код участника': 'Идентификатор чурки'
+                };
+                applyPlaceholderMap(phMap, enabled);
+
+                applyPTextMap({ 'Фото Витрины': 'Блядский шкаф' }, enabled);
+            }
+
+            if (path === '/participant-report') {
+                const h1 = Array.from(document.querySelectorAll('h1'))
+                    .find(el => ['Поиск участников', 'Поиск табачных рабов'].includes(el.textContent.trim()));
+                if (h1) {
+                    setTextIfChanged(h1, enabled ? 'Поиск табачных рабов' : 'Поиск участников');
+                }
+
+                const phMap = {
+                    'Код участника': 'Код раба',
+                    'Имя участника для поиска': 'Имя раба для поиска',
+                    'Фамилия участника для поиска': 'Фамилия раба для поиска',
+                    'Номер телефона участника для поиска': 'Номер телефона раба для поиска'
+                };
+                applyPlaceholderMap(phMap, enabled);
+            }
+
+            if (path === '/pos-report') {
+                const h1 = Array.from(document.querySelectorAll('h1'))
+                    .find(el => ['Поиск', 'Поиск аулов'].includes(el.textContent.trim()));
+                if (h1) {
+                    setTextIfChanged(h1, enabled ? 'Поиск аулов' : 'Поиск');
+                }
+
+                const phMap = {
+                    'Код точки продаж': 'Номер аула'
+                };
+                applyPlaceholderMap(phMap, enabled);
+            }
+        } finally {
+            isApplyingEasterEgg = false;
+        }
+    }
+
+    function applyPlaceholderMap(map, enabled) {
+        const forward = map;
+        const reverse = {};
+        for (const [k, v] of Object.entries(map)) reverse[v] = k;
+
+        document.querySelectorAll('input[placeholder]').forEach(input => {
+            const ph = input.placeholder;
+            if (enabled) {
+                if (forward[ph]) setPlaceholderIfChanged(input, forward[ph]);
+            } else {
+                if (reverse[ph]) setPlaceholderIfChanged(input, reverse[ph]);
+            }
+        });
+    }
+
+    function applyPTextMap(map, enabled) {
+        const forward = map;
+        const reverse = {};
+        for (const [k, v] of Object.entries(map)) reverse[v] = k;
+
+        document.querySelectorAll('p').forEach(p => {
+            const t = p.textContent.trim();
+            if (enabled) {
+                if (forward[t]) setTextIfChanged(p, forward[t]);
+            } else {
+                if (reverse[t]) setTextIfChanged(p, reverse[t]);
+            }
+        });
+    }
+
+    function setEasterEggEnabled(enabled) {
+        localStorage.setItem(EASTER_EGG_LS_KEY, enabled ? 'true' : 'false');
+        if (!enabled) {
+            sessionStorage.removeItem(EASTER_EGG_H1_CHOICE_KEY);
+        }
+        applyEasterEggTexts(enabled);
+    }
+
+    function setupEasterEggToggle() {
+        document.querySelectorAll('.mui-18py4ty-primaryText').forEach(el => {
+            if (el.classList.contains('face-fix-easter-egg-toggle')) return;
+            el.classList.add('face-fix-easter-egg-toggle');
+
+            el.style.cursor = 'pointer';
+            el.style.transition = 'color 0.15s ease, background-color 0.15s ease';
+            el.style.padding = '2px 6px';
+            el.style.marginLeft = '-6px';
+            el.style.borderRadius = '4px';
+            el.style.display = 'inline-block';
+            el.style.userSelect = 'none';
+
+            el.addEventListener('mouseenter', () => {
+                el.style.color = '#1976d2';
+                el.style.backgroundColor = 'rgba(25, 118, 210, 0.08)';
+            });
+            el.addEventListener('mouseleave', () => {
+                el.style.color = '';
+                el.style.backgroundColor = '';
+            });
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setEasterEggEnabled(!isEasterEggEnabled());
+            });
+        });
+    }
+
     // ---------------------------- ОБРАБОТКА MS ИЗОБРАЖЕНИЙ ----------------------------
 
     function processMSImages() {
@@ -541,12 +728,11 @@
             header.style.cssText = `
                 font-size: 16px;
                 font-weight: bold;
-                color: #333;
+                color: white;
                 text-align: center;
                 margin-bottom: 10px;
                 padding: 10px;
                 background: #1976d2;
-                color: white;
                 border-radius: 8px;
             `;
             msMainContainer.appendChild(header);
@@ -589,7 +775,6 @@
                 `;
 
                 const clonedImg = img.cloneNode(true);
-                // Если src пустой, а есть data-src – копируем
                 if (!clonedImg.src || clonedImg.src === '' || clonedImg.src === window.location.href) {
                     const dataSrc = clonedImg.getAttribute('data-src');
                     if (dataSrc) {
@@ -641,7 +826,6 @@
                     `;
 
                     const fullSizeImg = img.cloneNode();
-                    // Также копируем data-src в src
                     if (!fullSizeImg.src || fullSizeImg.src === '' || fullSizeImg.src === window.location.href) {
                         const dataSrc = fullSizeImg.getAttribute('data-src');
                         if (dataSrc) {
@@ -702,16 +886,13 @@
             if (img.closest('.ms-main-images-container')) return;
             if (msHiddenContainers.has(img)) return;
 
-            // Пытаемся найти родительский блок .face-theoryBlock-contentItem или похожий
             let containerToHide = img.closest('.face-theoryBlock-contentItem');
             if (!containerToHide) {
-                // Ищем ближайший div.MuiBox-root, который содержит только изображение (или несколько)
                 let parent = img.parentElement;
                 while (parent && parent !== document.body) {
-                    if (parent.classList.contains('MuiBox-root') && 
-                        !parent.querySelector('button') && 
+                    if (parent.classList.contains('MuiBox-root') &&
+                        !parent.querySelector('button') &&
                         !parent.classList.contains('MuiCard-root')) {
-                        // Проверим, что внутри нет других значимых элементов
                         const children = parent.children;
                         let allImages = true;
                         for (let child of children) {
@@ -729,7 +910,6 @@
                 }
             }
 
-            // Если не нашли, попробуем найти ближайший .MuiAccordionDetails-root или .mui-qspag7-ItemCard-content
             if (!containerToHide) {
                 const accordion = img.closest('.MuiAccordionDetails-root');
                 if (accordion) {
@@ -746,7 +926,6 @@
                 containerToHide.style.display = 'none';
                 msHiddenContainers.add(img);
             } else {
-                // запасной вариант: просто скрываем родительский div, если он небольшой
                 let parent = img.parentElement;
                 while (parent && parent !== document.body) {
                     if (parent.children.length === 1 && parent.children[0] === img) {
@@ -1124,7 +1303,6 @@
                 `;
 
                 const clonedImg = exampleImg.cloneNode(true);
-                // Если src пустой, а есть data-src – копируем
                 if (!clonedImg.src || clonedImg.src === '' || clonedImg.src === window.location.href) {
                     const dataSrc = clonedImg.getAttribute('data-src');
                     if (dataSrc) {
@@ -1142,18 +1320,116 @@
                 imageContainer.appendChild(clonedImg);
                 cardContainer.parentNode.insertBefore(imageContainer, cardContainer.nextSibling);
 
-                // Скрываем оригинальный контейнер с изображением
                 const originalContainer = exampleImg.closest('.mui-4ltfca-ItemCard-root');
                 if (originalContainer) {
                     originalContainer.style.display = 'none';
                 } else {
-                    // Если не нашли, попробуем скрыть родительский блок с изображением
                     const parent = exampleImg.closest('.face-theoryBlock-contentItem');
                     if (parent) parent.style.display = 'none';
                 }
 
                 processedUrls.add(currentUrl);
             }
+        }
+    }
+
+    // ---------------------- ПЕРЕНОС БЛОКА «НА ПРОВЕРКЕ» ----------------------
+
+    function relocateCheckingInfoBlock() {
+        if (!window.location.href.includes('dte-tasks-checking')) return;
+
+        const counter = document.querySelector('.face-fix-photo-counter');
+        if (!counter) return;
+
+        const checkingLabel = Array.from(document.querySelectorAll('p.mui-z48z1h'))
+            .find(p => p.textContent.includes('На проверке'));
+        if (!checkingLabel) return;
+
+        const sourceBlock = checkingLabel.closest('.face-twoColumnContainer-leftColumn');
+        if (!sourceBlock) return;
+
+        const evaluatedLabel = Array.from(sourceBlock.querySelectorAll('p'))
+            .find(p => p.textContent.includes('Оценено сегодня'));
+        const gotoBtn = sourceBlock.querySelector('button');
+
+        const checkingText = checkingLabel.textContent.trim();
+        const evaluatedText = evaluatedLabel ? evaluatedLabel.textContent.trim() : 'Оценено: 0';
+        const compactEvaluated = evaluatedText.replace('Оценено сегодня', 'Оценено');
+
+        let infoBlock = document.querySelector('.face-fix-checking-info');
+
+        if (!infoBlock) {
+            infoBlock = document.createElement('div');
+            infoBlock.className = 'face-fix-checking-info';
+            infoBlock.style.cssText = `
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                margin-right: 8px;
+                font-size: 14px;
+                color: #1565c0;
+                background: #e3f2fd;
+                border: 1px solid #90caf9;
+                border-radius: 6px;
+                padding: 3px 12px;
+                vertical-align: middle;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                user-select: none;
+                white-space: nowrap;
+            `;
+
+            const checkingSpan = document.createElement('span');
+            checkingSpan.className = 'face-fix-checking-count';
+            checkingSpan.style.fontWeight = '600';
+
+            const separator = document.createElement('span');
+            separator.textContent = '|';
+            separator.style.color = '#90caf9';
+
+            const evaluatedSpan = document.createElement('span');
+            evaluatedSpan.className = 'face-fix-evaluated-count';
+
+            infoBlock.appendChild(checkingSpan);
+            infoBlock.appendChild(separator);
+            infoBlock.appendChild(evaluatedSpan);
+
+            infoBlock.addEventListener('mouseenter', () => {
+                infoBlock.style.background = '#bbdefb';
+                infoBlock.style.boxShadow = '0 2px 4px rgba(25, 118, 210, 0.25)';
+            });
+            infoBlock.addEventListener('mouseleave', () => {
+                infoBlock.style.background = '#e3f2fd';
+                infoBlock.style.boxShadow = 'none';
+            });
+            infoBlock.addEventListener('click', () => {
+                const btn = document.querySelector('.face-fix-checking-goto-btn');
+                if (btn) btn.click();
+            });
+            infoBlock.title = 'Перейти к проверке задач';
+        }
+
+        if (gotoBtn && !gotoBtn.classList.contains('face-fix-checking-goto-btn')) {
+            gotoBtn.classList.add('face-fix-checking-goto-btn');
+        }
+
+        const checkingSpan = infoBlock.querySelector('.face-fix-checking-count');
+        const evaluatedSpan = infoBlock.querySelector('.face-fix-evaluated-count');
+        if (checkingSpan && checkingSpan.textContent !== checkingText) {
+            checkingSpan.textContent = checkingText;
+        }
+        if (evaluatedSpan && evaluatedSpan.textContent !== compactEvaluated) {
+            evaluatedSpan.textContent = compactEvaluated;
+        }
+
+        if (sourceBlock.style.display !== 'none') {
+            sourceBlock.style.display = 'none';
+        }
+
+        const resetBtn = document.querySelector('.face-fix-photo-reset');
+        const target = resetBtn || counter;
+        if (target.parentNode && infoBlock.nextElementSibling !== target) {
+            target.parentNode.insertBefore(infoBlock, target);
         }
     }
 
@@ -1754,7 +2030,7 @@
         }
     }
 
-    // ------------------------- НОВЫЙ ФУНКЦИОНАЛ (КНОПКА "ОБРАЩЕНИЕ") -------------------------
+    // ------------------------- КНОПКА "ОБРАЩЕНИЕ" -------------------------
 
     const mappingCache = { NPL: null, В: null };
     const mappingFetchPromise = {};
@@ -1913,55 +2189,74 @@
     // ------------------------- ОСНОВНАЯ ЛОГИКА -------------------------
 
     function checkAndProcess() {
-        if (window.location.href.includes('/process/')) {
-            const newType = getPhotoTaskTypeFromTemplate();
-            if (newType !== currentPhotoTaskType) {
-                currentPhotoTaskType = newType;
+        try {
+            if (window.location.href.includes('/process/')) {
+                const newType = getPhotoTaskTypeFromTemplate();
+                if (newType !== currentPhotoTaskType) {
+                    currentPhotoTaskType = newType;
 
-                if (newType === 'MS') {
-                    msImagesProcessed = false;
-                    processedUrls.delete(window.location.href);
+                    if (newType === 'MS') {
+                        msImagesProcessed = false;
+                        processedUrls.delete(window.location.href);
+                    }
                 }
             }
+
+            moveImage();
+            adjustToastifyNotification();
+            addConfirmButtonHint();
+            addAcceptButtonHint();
+            addSearchButtonHint();
+            addTasksHeader();
+            addActionButtonListeners();
+
+            if (window.location.href.includes('/process/')) {
+                transformTaskInfoToTwoColumns();
+            }
+
+            makeValuesClickable();
+            showScriptActive();
+
+            if (currentPhotoTaskType === 'MS') {
+                hideMSContainers();
+            }
+
+            if (window.updatePhotoTaskCounterDisplay) {
+                window.updatePhotoTaskCounterDisplay();
+            }
+
+            addAppealButton();
+            relocateCheckingInfoBlock();
+
+            // Пасхалка
+            setupEasterEggToggle();
+            applyEasterEggTexts(isEasterEggEnabled());
+        } catch (err) {
+            console.error('FACE FIX: ошибка в checkAndProcess', err);
         }
-
-        moveImage();
-        adjustToastifyNotification();
-        addConfirmButtonHint();
-        addAcceptButtonHint();
-        addSearchButtonHint();
-        addTasksHeader();
-        addActionButtonListeners();
-
-        if (window.location.href.includes('/process/')) {
-            transformTaskInfoToTwoColumns();
-        }
-
-        makeValuesClickable();
-        showScriptActive();
-
-        if (currentPhotoTaskType === 'MS') {
-            hideMSContainers();
-        }
-
-        if (window.updatePhotoTaskCounterDisplay) {
-            window.updatePhotoTaskCounterDisplay();
-        }
-
-        addAppealButton();
     }
 
     // ------------------------- ИНИЦИАЛИЗАЦИЯ -------------------------
 
     function init() {
-        checkAndProcess();
-        showChangelogIfNeeded();
+        try {
+            checkAndProcess();
+        } catch (err) {
+            console.error('FACE FIX: ошибка в init', err);
+        }
+        try {
+            showChangelogIfNeeded();
+        } catch (err) {
+            console.error('FACE FIX: ошибка changelog', err);
+        }
     }
 
     window.addEventListener('load', init);
     setInterval(checkAndProcess, 2000);
 
-    const observer = new MutationObserver(checkAndProcess);
+    const observer = new MutationObserver(() => {
+        try { checkAndProcess(); } catch (e) { console.error('FACE FIX observer', e); }
+    });
     observer.observe(document.body, { childList: true, subtree: true });
 
     let lastUrl = location.href;
